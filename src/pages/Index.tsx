@@ -4,16 +4,26 @@ import { SentenceCard } from "@/components/SentenceCard";
 import { sentences } from "@/data/sentences";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import confetti from 'canvas-confetti';
+
+// Add TypeScript types for SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
 
 const Index = () => {
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const { toast } = useToast();
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [completedSentences] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if ("webkitSpeechRecognition" in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
       recognitionInstance.continuous = false;
       recognitionInstance.interimResults = false;
@@ -22,24 +32,33 @@ const Index = () => {
       recognitionInstance.onresult = (event) => {
         const transcript = event.results[0][0].transcript.toLowerCase();
         const currentSentence = sentences[currentSentenceIndex].text.toLowerCase();
+        const confidence = event.results[0][0].confidence;
         
-        if (transcript.includes(currentSentence) || currentSentence.includes(transcript)) {
+        if (transcript === currentSentence) {
+          // Perfect match
           toast({
-            title: "Great job!",
-            description: "Your pronunciation was correct!",
+            title: "Excellent! 🎉",
+            description: "Perfect pronunciation!",
             duration: 3000,
           });
-          
-          // Move to next sentence after a brief delay
-          setTimeout(() => {
-            if (currentSentenceIndex < sentences.length - 1) {
-              setCurrentSentenceIndex(prev => prev + 1);
-            }
-          }, 1500);
-        } else {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+          setTimeout(() => handleNext(), 1500);
+        } else if (transcript.includes(currentSentence) || currentSentence.includes(transcript)) {
+          // Partial match
           toast({
-            title: "Try again",
-            description: "Let's practice this sentence one more time!",
+            title: "Good try! 👍",
+            description: "Almost perfect! Try one more time.",
+            duration: 3000,
+          });
+        } else {
+          // No match
+          toast({
+            title: "Let's try again! 💪",
+            description: "Listen carefully and try to repeat the sentence.",
             duration: 3000,
           });
         }
@@ -49,13 +68,18 @@ const Index = () => {
       recognitionInstance.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
+        toast({
+          title: "Oops!",
+          description: "There was an error with the speech recognition. Please try again.",
+          duration: 3000,
+        });
       };
 
       setRecognition(recognitionInstance);
     } else {
       toast({
         title: "Speech Recognition Not Available",
-        description: "Your browser doesn't support speech recognition.",
+        description: "Your browser doesn't support speech recognition. Try using Chrome!",
         duration: 5000,
       });
     }
@@ -73,6 +97,16 @@ const Index = () => {
       setIsListening(true);
       recognition.start();
     }
+  };
+
+  const handleNext = () => {
+    if (currentSentenceIndex < sentences.length - 1) {
+      setCurrentSentenceIndex(prev => prev + 1);
+    }
+  };
+
+  const handleSkip = () => {
+    handleNext();
   };
 
   return (
@@ -96,6 +130,7 @@ const Index = () => {
             category={sentences[currentSentenceIndex].category}
             onListen={handleListen}
             onSpeak={handleSpeak}
+            onSkip={handleSkip}
             isListening={isListening}
           />
           
