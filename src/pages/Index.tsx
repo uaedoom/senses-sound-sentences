@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import confetti from 'canvas-confetti';
 
-// Add TypeScript types for SpeechRecognition
 declare global {
   interface Window {
     SpeechRecognition: new () => SpeechRecognition;
@@ -46,7 +45,7 @@ const Index = () => {
           // Perfect match
           toast({
             title: "Excellent! 🎉",
-            description: "Perfect pronunciation!",
+            description: `You said: "${transcript}"\nPerfect pronunciation!`,
             duration: 3000,
           });
           confetti({
@@ -63,15 +62,15 @@ const Index = () => {
           // Partial match
           toast({
             title: "Good try! 👍",
-            description: "Almost perfect! Try one more time.",
-            duration: 3000,
+            description: `You said: "${transcript}"\nExpected: "${sentences[currentSentenceIndex].text}"\nAlmost perfect! Try one more time.`,
+            duration: 4000,
           });
         } else {
           // No match
           toast({
             title: "Let's try again! 💪",
-            description: "Listen carefully and try to repeat the sentence.",
-            duration: 3000,
+            description: `You said: "${transcript}"\nExpected: "${sentences[currentSentenceIndex].text}"\nListen carefully and try to repeat the sentence.`,
+            duration: 4000,
           });
         }
         setIsListening(false);
@@ -114,7 +113,7 @@ const Index = () => {
         recognition.abort();
       }
     };
-  }, []);
+  }, [currentSentenceIndex]); // Reinitialize when sentence changes
 
   const handleListen = () => {
     const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex].text);
