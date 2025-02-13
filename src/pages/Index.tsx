@@ -21,7 +21,7 @@ const Index = () => {
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [completedSentences] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
+  const initializeRecognition = () => {
     if ("webkitSpeechRecognition" in window) {
       const SpeechRecognition = window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
@@ -89,6 +89,12 @@ const Index = () => {
 
       recognitionInstance.onend = () => {
         setIsListening(false);
+        // Clean up and reinitialize for next use
+        recognitionInstance.abort();
+        setRecognition(null);
+        setTimeout(() => {
+          initializeRecognition();
+        }, 100);
       };
 
       setRecognition(recognitionInstance);
@@ -99,6 +105,15 @@ const Index = () => {
         duration: 5000,
       });
     }
+  };
+
+  useEffect(() => {
+    initializeRecognition();
+    return () => {
+      if (recognition) {
+        recognition.abort();
+      }
+    };
   }, []);
 
   const handleListen = () => {
@@ -109,10 +124,15 @@ const Index = () => {
   };
 
   const handleSpeak = () => {
-    if (recognition) {
-      setIsListening(true);
-      recognition.start();
+    if (!recognition) {
+      initializeRecognition();
     }
+    setTimeout(() => {
+      if (recognition) {
+        setIsListening(true);
+        recognition.start();
+      }
+    }, 100);
   };
 
   const handleNext = () => {
