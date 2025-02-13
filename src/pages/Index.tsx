@@ -30,11 +30,19 @@ const Index = () => {
       recognitionInstance.lang = "en-US";
 
       recognitionInstance.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase();
-        const currentSentence = sentences[currentSentenceIndex].text.toLowerCase();
+        const transcript = event.results[0][0].transcript.toLowerCase().trim();
+        const currentSentence = sentences[currentSentenceIndex].text.toLowerCase().trim();
         const confidence = event.results[0][0].confidence;
         
-        if (transcript === currentSentence) {
+        // Remove punctuation and normalize spaces for comparison
+        const normalizedTranscript = transcript.replace(/[.,!?]/g, '').replace(/\s+/g, ' ');
+        const normalizedSentence = currentSentence.replace(/[.,!?]/g, '').replace(/\s+/g, ' ');
+
+        console.log('Transcript:', normalizedTranscript);
+        console.log('Expected:', normalizedSentence);
+        console.log('Confidence:', confidence);
+        
+        if (normalizedTranscript === normalizedSentence) {
           // Perfect match
           toast({
             title: "Excellent! 🎉",
@@ -47,7 +55,11 @@ const Index = () => {
             origin: { y: 0.6 }
           });
           setTimeout(() => handleNext(), 1500);
-        } else if (transcript.includes(currentSentence) || currentSentence.includes(transcript)) {
+        } else if (
+          normalizedTranscript.includes(normalizedSentence) || 
+          normalizedSentence.includes(normalizedTranscript) ||
+          confidence > 0.8
+        ) {
           // Partial match
           toast({
             title: "Good try! 👍",
@@ -73,6 +85,10 @@ const Index = () => {
           description: "There was an error with the speech recognition. Please try again.",
           duration: 3000,
         });
+      };
+
+      recognitionInstance.onend = () => {
+        setIsListening(false);
       };
 
       setRecognition(recognitionInstance);
